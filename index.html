@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>NEON VECTOR RACE</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="game-container">
+    <!-- Lienzo principal donde se renderiza la carretera, el vehículo y los efectos 3D -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Capa de efectos visuales (destellos de impacto / líneas de velocidad) -->
+    <div id="screen-flash"></div>
+
+    <!-- INTERFAZ EN PARTIDA (HUD) -->
+    <header id="hud" class="hidden" aria-label="Panel de control del vehículo">
+      <!-- Bloque Izquierdo: Velocímetro, barra de velocidad y estado de turbo -->
+      <div class="hud-panel hud-left">
+        <div class="speed-header">
+          <span class="hud-label">VELOCIDAD</span>
+          <span id="boost-badge" class="boost-badge">TURBO ACTIVO</span>
+        </div>
+        <div class="speed-readout">
+          <span id="hud-speed">0</span>
+          <span class="speed-unit">KM/H</span>
+        </div>
+        <div class="progress-track" title="Barra de velocidad">
+          <div id="speed-bar" class="progress-fill speed-fill"></div>
+        </div>
+        <div id="boost-timer-track" class="progress-track boost-track hidden">
+          <div id="boost-bar" class="progress-fill boost-fill"></div>
+        </div>
+      </div>
+
+      <!-- Bloque Central: Distancia y Puntuación -->
+      <div class="hud-panel hud-center">
+        <div class="stat-box">
+          <span class="hud-label">DISTANCIA</span>
+          <span id="hud-distance" class="stat-value">0 m</span>
+        </div>
+        <div class="hud-divider"></div>
+        <div class="stat-box">
+          <span class="hud-label">PUNTUACIÓN</span>
+          <span id="hud-score" class="stat-value cyan-glow">0</span>
+        </div>
+      </div>
+
+      <!-- Bloque Derecho: Integridad, Aciertos y Controles de Sesión -->
+      <div class="hud-panel hud-right">
+        <div class="right-metrics">
+          <div class="stat-box">
+            <span class="hud-label">ACIERTOS</span>
+            <span id="hud-correct" class="stat-value green-glow">0</span>
+          </div>
+          <div class="shield-box">
+            <div class="shield-header">
+              <span class="hud-label">INTEGRIDAD</span>
+              <span id="hud-shield-text" class="shield-percent">100%</span>
+            </div>
+            <div class="progress-track">
+              <div id="shield-bar" class="progress-fill shield-fill"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hud-actions">
+          <button id="btn-sound" class="hud-btn" type="button" title="Activar o silenciar audio">AUDIO: ON</button>
+          <button id="btn-pause" class="hud-btn" type="button" title="Pausar partida (P)">PAUSA</button>
+          <button id="btn-restart" class="hud-btn danger-btn" type="button" title="Reiniciar carrera (R)">REINICIAR</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- CONTROLES TÁCTILES PARA DISPOSITIVOS MÓVILES -->
+    <div id="touch-controls" class="hidden">
+      <button id="touch-left" class="touch-pad" type="button" aria-label="Mover a la izquierda">
+        <span class="arrow-shape left"></span>
+      </button>
+      <button id="touch-right" class="touch-pad" type="button" aria-label="Mover a la derecha">
+        <span class="arrow-shape right"></span>
+      </button>
+    </div>
+
+    <!-- PANTALLA DE INICIO -->
+    <section id="start-screen" class="overlay-screen active">
+      <div class="neon-card start-card">
+        <div class="cyber-tag">SISTEMA DE SIMULACIÓN SINTÉTICA // V.2.6</div>
+        <h1 class="game-title">NEON VECTOR RACE</h1>
+        <p class="game-subtitle">
+          Conduce a través de la autopista cibernética, esquiva obstáculos y domina el Cálculo Vectorial para impulsar tu reactor.
+        </p>
+
+        <div class="instructions-grid">
+          <div class="instruction-item">
+            <span class="key-badge">A / D</span>
+            <span class="key-badge">FLECHAS</span>
+            <p>Desplazamiento lateral en pista</p>
+          </div>
+          <div class="instruction-item">
+            <span class="key-badge">ORBES CIAN</span>
+            <p>Activan sobrecarga de velocidad</p>
+          </div>
+          <div class="instruction-item">
+            <span class="key-badge">CÁLCULO VECTORIAL</span>
+            <p>Responde correctamente cada 20-30s para ganar impulso</p>
+          </div>
+          <div class="instruction-item">
+            <span class="key-badge">P / R</span>
+            <p>Pausar o reiniciar el circuito</p>
+          </div>
+        </div>
+
+        <button id="btn-start" class="neon-cta-btn" type="button">INICIAR JUEGO</button>
+      </div>
+    </section>
+
+    <!-- MODAL DE PREGUNTAS DE CÁLCULO VECTORIAL -->
+    <section id="quiz-modal" class="overlay-screen hidden" role="dialog" aria-modal="true" aria-labelledby="quiz-question">
+      <div class="neon-card quiz-card">
+        <div class="quiz-header">
+          <span class="cyber-tag">INTERCEPCIÓN DE CÁLCULO VECTORIAL</span>
+          <span id="quiz-topic" class="topic-badge">VECTORES</span>
+        </div>
+
+        <h2 id="quiz-question" class="quiz-question-text"></h2>
+
+        <div id="quiz-options" class="quiz-options">
+          <button class="quiz-option-btn" data-index="0" type="button">
+            <span class="option-letter">a)</span>
+            <span class="option-text"></span>
+          </button>
+          <button class="quiz-option-btn" data-index="1" type="button">
+            <span class="option-letter">b)</span>
+            <span class="option-text"></span>
+          </button>
+          <button class="quiz-option-btn" data-index="2" type="button">
+            <span class="option-letter">c)</span>
+            <span class="option-text"></span>
+          </button>
+        </div>
+
+        <div id="quiz-feedback" class="quiz-feedback hidden">
+          <div id="quiz-result-banner" class="result-banner"></div>
+          <p id="quiz-explanation" class="explanation-text"></p>
+          <button id="btn-quiz-continue" class="neon-cta-btn small-btn" type="button">CONTINUAR CARRERA</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANTALLA DE PAUSA -->
+    <section id="pause-screen" class="overlay-screen hidden">
+      <div class="neon-card pause-card">
+        <div class="cyber-tag">SISTEMA EN ESPERA</div>
+        <h2 class="overlay-title">JUEGO EN PAUSA</h2>
+        <p class="overlay-desc">La telemetría del circuito está detenida.</p>
+        <div class="button-row">
+          <button id="btn-resume" class="neon-cta-btn" type="button">CONTINUAR</button>
+          <button id="btn-pause-restart" class="neon-secondary-btn" type="button">REINICIAR</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANTALLA DE GAME OVER -->
+    <section id="gameover-screen" class="overlay-screen hidden">
+      <div class="neon-card gameover-card">
+        <div class="cyber-tag danger-tag">INTEGRIDAD AGOTADA</div>
+        <h2 class="overlay-title">FIN DE LA CARRERA</h2>
+
+        <div class="results-grid">
+          <div class="result-stat">
+            <span class="hud-label">DISTANCIA RECORRIDA</span>
+            <span id="final-distance" class="result-number cyan-glow">0 m</span>
+          </div>
+          <div class="result-stat">
+            <span class="hud-label">PUNTUACIÓN FINAL</span>
+            <span id="final-score" class="result-number pink-glow">0</span>
+          </div>
+          <div class="result-stat">
+            <span class="hud-label">RESPUESTAS CORRECTAS</span>
+            <span id="final-correct" class="result-number green-glow">0</span>
+          </div>
+          <div class="result-stat">
+            <span class="hud-label">RESPUESTAS INCORRECTAS</span>
+            <span id="final-incorrect" class="result-number red-glow">0</span>
+          </div>
+        </div>
+
+        <button id="btn-play-again" class="neon-cta-btn" type="button">VOLVER A JUGAR</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
